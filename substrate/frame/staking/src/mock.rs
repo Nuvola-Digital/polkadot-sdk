@@ -714,10 +714,7 @@ pub(crate) fn validator_controllers() -> Vec<AccountId> {
 }
 
 pub(crate) fn on_offence_in_era(
-	offenders: &[OffenceDetails<
-		AccountId,
-		pallet_session::historical::IdentificationTuple<Test>,
-	>],
+	offenders: &[OffenceDetails<AccountId, AccountId>],
 	slash_fraction: &[Perbill],
 	era: EraIndex,
 ) {
@@ -743,10 +740,7 @@ pub(crate) fn on_offence_in_era(
 }
 
 pub(crate) fn on_offence_now(
-	offenders: &[OffenceDetails<
-		AccountId,
-		pallet_session::historical::IdentificationTuple<Test>,
-	>],
+	offenders: &[OffenceDetails<AccountId, AccountId>],
 	slash_fraction: &[Perbill],
 ) {
 	let now = pallet_staking::ActiveEra::<Test>::get().unwrap().index;
@@ -755,10 +749,7 @@ pub(crate) fn on_offence_now(
 
 pub(crate) fn add_slash(who: &AccountId) {
 	on_offence_now(
-		&[OffenceDetails {
-			offender: (*who, Staking::eras_stakers(active_era(), who)),
-			reporters: vec![],
-		}],
+		&[OffenceDetails { offender: *who, reporters: vec![] }],
 		&[Perbill::from_percent(10)],
 	);
 }

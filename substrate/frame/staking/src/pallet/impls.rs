@@ -1489,15 +1489,13 @@ where
 }
 
 /// This is intended to be used with `FilterHistoricalOffences`.
-impl<T: Config>
-	OnOffenceHandler<T::AccountId, pallet_session::historical::IdentificationTuple<T>, Weight>
-	for Pallet<T>
+impl<T: Config> OnOffenceHandler<T::AccountId, T::AccountId, Weight> for Pallet<T>
 where
 	T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
-	T: pallet_session::historical::Config<
-		FullIdentification = Exposure<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
-		FullIdentificationOf = ExposureOf<T>,
-	>,
+	// T: pallet_session::historical::Config<
+	// 	FullIdentification = Exposure<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
+	// 	FullIdentificationOf = ExposureOf<T>,
+	// >,
 	T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Config>::AccountId>,
 	T::SessionManager: pallet_session::SessionManager<<T as frame_system::Config>::AccountId>,
 	T::ValidatorIdOf: Convert<
@@ -1506,125 +1504,122 @@ where
 	>,
 {
 	fn on_offence(
-		offenders: &[OffenceDetails<
-			T::AccountId,
-			pallet_session::historical::IdentificationTuple<T>,
-		>],
+		offenders: &[OffenceDetails<T::AccountId, T::AccountId>],
 		slash_fraction: &[Perbill],
 		slash_session: SessionIndex,
 	) -> Weight {
-		let reward_proportion = SlashRewardFraction::<T>::get();
+		// let reward_proportion = SlashRewardFraction::<T>::get();
 		let mut consumed_weight = Weight::from_parts(0, 0);
-		let mut add_db_reads_writes = |reads, writes| {
-			consumed_weight += T::DbWeight::get().reads_writes(reads, writes);
-		};
-
-		let active_era = {
-			let active_era = ActiveEra::<T>::get();
-			add_db_reads_writes(1, 0);
-			if active_era.is_none() {
-				// This offence need not be re-submitted.
-				return consumed_weight
-			}
-			active_era.expect("value checked not to be `None`; qed").index
-		};
-		let active_era_start_session_index = ErasStartSessionIndex::<T>::get(active_era)
-			.unwrap_or_else(|| {
-				frame_support::print("Error: start_session_index must be set for current_era");
-				0
-			});
-		add_db_reads_writes(1, 0);
-
-		let window_start = active_era.saturating_sub(T::BondingDuration::get());
-
-		// Fast path for active-era report - most likely.
-		// `slash_session` cannot be in a future active era. It must be in `active_era` or before.
-		let slash_era = if slash_session >= active_era_start_session_index {
-			active_era
-		} else {
-			let eras = BondedEras::<T>::get();
-			add_db_reads_writes(1, 0);
-
-			// Reverse because it's more likely to find reports from recent eras.
-			match eras.iter().rev().find(|&(_, sesh)| sesh <= &slash_session) {
-				Some((slash_era, _)) => *slash_era,
-				// Before bonding period. defensive - should be filtered out.
-				None => return consumed_weight,
-			}
-		};
-
-		add_db_reads_writes(1, 1);
-
-		let slash_defer_duration = T::SlashDeferDuration::get();
-
-		let invulnerables = Invulnerables::<T>::get();
-		add_db_reads_writes(1, 0);
-
-		for (details, slash_fraction) in offenders.iter().zip(slash_fraction) {
-			let (stash, exposure) = &details.offender;
-
-			// Skip if the validator is invulnerable.
-			if invulnerables.contains(stash) {
-				continue
-			}
-
-			Self::deposit_event(Event::<T>::SlashReported {
-				validator: stash.clone(),
-				fraction: *slash_fraction,
-				slash_era,
-			});
-
-			let unapplied = slashing::compute_slash::<T>(slashing::SlashParams {
-				stash,
-				slash: *slash_fraction,
-				exposure,
-				slash_era,
-				window_start,
-				now: active_era,
-				reward_proportion,
-			});
-
-			if let Some(mut unapplied) = unapplied {
-				let nominators_len = unapplied.others.len() as u64;
-				let reporters_len = details.reporters.len() as u64;
-
-				{
-					let upper_bound = 1 /* Validator/NominatorSlashInEra */ + 2 /* fetch_spans */;
-					let rw = upper_bound + nominators_len * upper_bound;
-					add_db_reads_writes(rw, rw);
-				}
-				unapplied.reporters = details.reporters.clone();
-				if slash_defer_duration == 0 {
-					// Apply right away.
-					slashing::apply_slash::<T>(unapplied, slash_era);
-					{
-						let slash_cost = (6, 5);
-						let reward_cost = (2, 2);
-						add_db_reads_writes(
-							(1 + nominators_len) * slash_cost.0 + reward_cost.0 * reporters_len,
-							(1 + nominators_len) * slash_cost.1 + reward_cost.1 * reporters_len,
-						);
-					}
-				} else {
-					// Defer to end of some `slash_defer_duration` from now.
-					log!(
-						debug,
-						"deferring slash of {:?}% happened in {:?} (reported in {:?}) to {:?}",
-						slash_fraction,
-						slash_era,
-						active_era,
-						slash_era + slash_defer_duration + 1,
-					);
-					UnappliedSlashes::<T>::mutate(
-						slash_era.saturating_add(slash_defer_duration).saturating_add(One::one()),
-						move |for_later| for_later.push(unapplied),
-					);
-					add_db_reads_writes(1, 1);
-				}
-			} else {
-				add_db_reads_writes(4 /* fetch_spans */, 5 /* kick_out_if_recent */)
-			}
-		}
+		// let mut add_db_reads_writes = |reads, writes| {
+		// 	consumed_weight += T::DbWeight::get().reads_writes(reads, writes);
+		// };
+		//
+		// let active_era = {
+		// 	let active_era = ActiveEra::<T>::get();
+		// 	add_db_reads_writes(1, 0);
+		// 	if active_era.is_none() {
+		// 		// This offence need not be re-submitted.
+		// 		return consumed_weight
+		// 	}
+		// 	active_era.expect("value checked not to be `None`; qed").index
+		// };
+		// let active_era_start_session_index = ErasStartSessionIndex::<T>::get(active_era)
+		// 	.unwrap_or_else(|| {
+		// 		frame_support::print("Error: start_session_index must be set for current_era");
+		// 		0
+		// 	});
+		// add_db_reads_writes(1, 0);
+		//
+		// let window_start = active_era.saturating_sub(T::BondingDuration::get());
+		//
+		// // Fast path for active-era report - most likely.
+		// // `slash_session` cannot be in a future active era. It must be in `active_era` or
+		// before. let slash_era = if slash_session >= active_era_start_session_index {
+		// 	active_era
+		// } else {
+		// 	let eras = BondedEras::<T>::get();
+		// 	add_db_reads_writes(1, 0);
+		//
+		// 	// Reverse because it's more likely to find reports from recent eras.
+		// 	match eras.iter().rev().find(|&(_, sesh)| sesh <= &slash_session) {
+		// 		Some((slash_era, _)) => *slash_era,
+		// 		// Before bonding period. defensive - should be filtered out.
+		// 		None => return consumed_weight,
+		// 	}
+		// };
+		//
+		// add_db_reads_writes(1, 1);
+		//
+		// let slash_defer_duration = T::SlashDeferDuration::get();
+		//
+		// let invulnerables = Invulnerables::<T>::get();
+		// add_db_reads_writes(1, 0);
+		//
+		// for (details, slash_fraction) in offenders.iter().zip(slash_fraction) {
+		// 	let (stash, exposure) = &details.offender;
+		//
+		// 	// Skip if the validator is invulnerable.
+		// 	if invulnerables.contains(stash) {
+		// 		continue
+		// 	}
+		//
+		// 	Self::deposit_event(Event::<T>::SlashReported {
+		// 		validator: stash.clone(),
+		// 		fraction: *slash_fraction,
+		// 		slash_era,
+		// 	});
+		//
+		// 	let unapplied = slashing::compute_slash::<T>(slashing::SlashParams {
+		// 		stash,
+		// 		slash: *slash_fraction,
+		// 		exposure,
+		// 		slash_era,
+		// 		window_start,
+		// 		now: active_era,
+		// 		reward_proportion,
+		// 	});
+		//
+		// 	if let Some(mut unapplied) = unapplied {
+		// 		let nominators_len = unapplied.others.len() as u64;
+		// 		let reporters_len = details.reporters.len() as u64;
+		//
+		// 		{
+		// 			let upper_bound = 1 /* Validator/NominatorSlashInEra */ + 2 /* fetch_spans */;
+		// 			let rw = upper_bound + nominators_len * upper_bound;
+		// 			add_db_reads_writes(rw, rw);
+		// 		}
+		// 		unapplied.reporters = details.reporters.clone();
+		// 		if slash_defer_duration == 0 {
+		// 			// Apply right away.
+		// 			slashing::apply_slash::<T>(unapplied, slash_era);
+		// 			{
+		// 				let slash_cost = (6, 5);
+		// 				let reward_cost = (2, 2);
+		// 				add_db_reads_writes(
+		// 					(1 + nominators_len) * slash_cost.0 + reward_cost.0 * reporters_len,
+		// 					(1 + nominators_len) * slash_cost.1 + reward_cost.1 * reporters_len,
+		// 				);
+		// 			}
+		// 		} else {
+		// 			// Defer to end of some `slash_defer_duration` from now.
+		// 			log!(
+		// 				debug,
+		// 				"deferring slash of {:?}% happened in {:?} (reported in {:?}) to {:?}",
+		// 				slash_fraction,
+		// 				slash_era,
+		// 				active_era,
+		// 				slash_era + slash_defer_duration + 1,
+		// 			);
+		// 			UnappliedSlashes::<T>::mutate(
+		// 				slash_era.saturating_add(slash_defer_duration).saturating_add(One::one()),
+		// 				move |for_later| for_later.push(unapplied),
+		// 			);
+		// 			add_db_reads_writes(1, 1);
+		// 		}
+		// 	} else {
+		// 		add_db_reads_writes(4 /* fetch_spans */, 5 /* kick_out_if_recent */)
+		// 	}
+		// }
 
 		consumed_weight
 	}
