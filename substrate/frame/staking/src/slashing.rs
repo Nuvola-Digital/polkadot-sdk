@@ -224,7 +224,7 @@ pub(crate) struct SlashParams<'a, T: 'a + Config> {
 }
 
 pub(crate) fn process_offence<T: Config>(
-	offenceDetail: OffenceDetails<T::AccountId, T::AccountId>,
+	offence_detail: OffenceDetails<T::AccountId, T::AccountId>,
 	slash_fraction: &Perbill,
 	slash_session: SessionIndex,
 	slash_page: Page,
@@ -236,14 +236,13 @@ pub(crate) fn process_offence<T: Config>(
 		consumed_weight += T::DbWeight::get().reads_writes(reads, writes);
 	};
 
-	let stash = offenceDetail.offender.clone();
+	let stash = offence_detail.offender.clone();
 
 	let invulnerables = Invulnerables::<T>::get();
 	add_db_reads_writes(1, 0);
 
 	// Skip if the validator is invulnerable.
 	if invulnerables.contains(&stash) {
-		// todo(ank4n) return err.
 		return consumed_weight;
 	}
 
@@ -315,14 +314,14 @@ pub(crate) fn process_offence<T: Config>(
 
 	if let Some(mut unapplied) = unapplied {
 		let nominators_len = unapplied.others.len() as u64;
-		let reporters_len = offenceDetail.reporters.len() as u64;
+		let reporters_len = offence_detail.reporters.len() as u64;
 
 		{
 			let upper_bound = 1 /* Validator/NominatorSlashInEra */ + 2 /* fetch_spans */;
 			let rw = upper_bound + nominators_len * upper_bound;
 			add_db_reads_writes(rw, rw);
 		}
-		unapplied.reporters = offenceDetail.reporters.clone();
+		unapplied.reporters = offence_detail.reporters.clone();
 		if slash_defer_duration == 0 {
 			// Apply right away.
 			apply_slash::<T>(unapplied, slash_era);
