@@ -1492,10 +1492,6 @@ where
 impl<T: Config> OnOffenceHandler<T::AccountId, T::AccountId, Weight> for Pallet<T>
 where
 	T: pallet_session::Config<ValidatorId = <T as frame_system::Config>::AccountId>,
-	// T: pallet_session::historical::Config<
-	// 	FullIdentification = Exposure<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
-	// 	FullIdentificationOf = ExposureOf<T>,
-	// >,
 	T::SessionHandler: pallet_session::SessionHandler<<T as frame_system::Config>::AccountId>,
 	T::SessionManager: pallet_session::SessionManager<<T as frame_system::Config>::AccountId>,
 	T::ValidatorIdOf: Convert<

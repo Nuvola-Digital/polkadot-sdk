@@ -49,23 +49,24 @@
 //!
 //! Based on research at <https://research.web3.foundation/en/latest/polkadot/slashing/npos.html>
 
-use crate::{
-	asset, BalanceOf, Config, DisabledValidators, DisablingStrategy, Error, Exposure,
-	NegativeImbalanceOf, NominatorSlashInEra, Pallet, Perbill, SessionInterface, SpanSlash,
-	UnappliedSlash, ValidatorSlashInEra,
-};
+use crate::{asset, log, pallet::pallet::BondedEras, ActiveEra, BalanceOf, Config, DisabledValidators, DisablingStrategy, EraInfo, ErasStartSessionIndex, Error, Exposure, Invulnerables, NegativeImbalanceOf, NominatorSlashInEra, PagedExposure, Pallet, Perbill, SessionInterface, SlashRewardFraction, SpanSlash, UnappliedSlash, UnappliedSlashes, ValidatorSlashInEra};
 use alloc::vec::Vec;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
+	dispatch::WithPostDispatchInfo,
 	ensure,
-	traits::{Defensive, DefensiveSaturating, Imbalance, OnUnbalanced},
+	pallet_prelude::{One, Weight},
+	traits::{Defensive, DefensiveSaturating, Get, Imbalance, OnUnbalanced},
 };
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{Saturating, Zero},
 	DispatchResult, RuntimeDebug,
 };
-use sp_staking::{offence::OffenceSeverity, EraIndex, StakingInterface};
+use sp_staking::{
+	offence::{OffenceDetails, OffenceSeverity},
+	EraIndex, Page, SessionIndex, StakingInterface,
+};
 
 /// The proportion of the slashing reward to be paid out on the first slashing detection.
 /// This is f_1 in the paper.
@@ -210,7 +211,7 @@ pub(crate) struct SlashParams<'a, T: 'a + Config> {
 	/// The proportion of the slash.
 	pub(crate) slash: Perbill,
 	/// The exposure of the stash and all nominators.
-	pub(crate) exposure: &'a Exposure<T::AccountId, BalanceOf<T>>,
+	pub(crate) exposure: &'a PagedExposure<T::AccountId, BalanceOf<T>>,
 	/// The era where the offence occurred.
 	pub(crate) slash_era: EraIndex,
 	/// The first era in the current bonding period.
@@ -220,6 +221,140 @@ pub(crate) struct SlashParams<'a, T: 'a + Config> {
 	/// The maximum percentage of a slash that ever gets paid out.
 	/// This is f_inf in the paper.
 	pub(crate) reward_proportion: Perbill,
+}
+
+pub(crate) fn process_offence<T: Config>(
+	offenceDetail: OffenceDetails<T::AccountId, T::AccountId>,
+	slash_fraction: &Perbill,
+	slash_session: SessionIndex,
+	slash_page: Page,
+) -> Weight {
+	// todo(ank4n): bench
+	let reward_proportion = SlashRewardFraction::<T>::get();
+	let mut consumed_weight = Weight::from_parts(0, 0);
+	let mut add_db_reads_writes = |reads, writes| {
+		consumed_weight += T::DbWeight::get().reads_writes(reads, writes);
+	};
+
+	let stash = offenceDetail.offender.clone();
+
+	let invulnerables = Invulnerables::<T>::get();
+	add_db_reads_writes(1, 0);
+
+	// Skip if the validator is invulnerable.
+	if invulnerables.contains(&stash) {
+		// todo(ank4n) return err.
+		return consumed_weight;
+	}
+
+	let active_era = {
+		let active_era = ActiveEra::<T>::get();
+		add_db_reads_writes(1, 0);
+		if active_era.is_none() {
+			// This offence need not be re-submitted.
+			return consumed_weight
+		}
+		active_era.expect("value checked not to be `None`; qed").index
+	};
+	let active_era_start_session_index = ErasStartSessionIndex::<T>::get(active_era)
+		.unwrap_or_else(|| {
+			frame_support::print("Error: start_session_index must be set for current_era");
+			0
+		});
+	add_db_reads_writes(1, 0);
+
+	let window_start = active_era.saturating_sub(T::BondingDuration::get());
+
+	// Fast path for active-era report - most likely.
+	// `slash_session` cannot be in a future active era. It must be in `active_era` or
+	// before.
+	let slash_era = if slash_session >= active_era_start_session_index {
+		active_era
+	} else {
+		let eras = BondedEras::<T>::get();
+		add_db_reads_writes(1, 0);
+
+		// Reverse because it's more likely to find reports from recent eras.
+		match eras.iter().rev().find(|&(_, sesh)| sesh <= &slash_session) {
+			Some((slash_era, _)) => *slash_era,
+			// Before bonding period. defensive - should be filtered out.
+			None => return consumed_weight,
+		}
+	};
+
+	add_db_reads_writes(1, 1);
+
+	let maybe_exposure =
+		EraInfo::<T>::get_paged_exposure(slash_era, &stash, slash_page);
+	add_db_reads_writes(2, 0);
+
+	if maybe_exposure.is_none() {
+		// defensive - should be filtered out.
+		return consumed_weight
+	}
+
+	let exposure = maybe_exposure.expect("value checked not to be `None`; qed");
+
+	let slash_defer_duration = T::SlashDeferDuration::get();
+
+	<Pallet<T>>::deposit_event(super::Event::<T>::SlashReported {
+		validator: stash.clone(),
+		fraction: *slash_fraction,
+		slash_era,
+	});
+
+	let unapplied = compute_slash::<T>(SlashParams {
+		stash: &stash,
+		slash: *slash_fraction,
+		exposure: &exposure,
+		slash_era,
+		window_start,
+		now: active_era,
+		reward_proportion,
+	});
+
+	if let Some(mut unapplied) = unapplied {
+		let nominators_len = unapplied.others.len() as u64;
+		let reporters_len = offenceDetail.reporters.len() as u64;
+
+		{
+			let upper_bound = 1 /* Validator/NominatorSlashInEra */ + 2 /* fetch_spans */;
+			let rw = upper_bound + nominators_len * upper_bound;
+			add_db_reads_writes(rw, rw);
+		}
+		unapplied.reporters = offenceDetail.reporters.clone();
+		if slash_defer_duration == 0 {
+			// Apply right away.
+			apply_slash::<T>(unapplied, slash_era);
+			{
+				let slash_cost = (6, 5);
+				let reward_cost = (2, 2);
+				add_db_reads_writes(
+					(1 + nominators_len) * slash_cost.0 + reward_cost.0 * reporters_len,
+					(1 + nominators_len) * slash_cost.1 + reward_cost.1 * reporters_len,
+				);
+			}
+		} else {
+			// Defer to end of some `slash_defer_duration` from now.
+			log!(
+				debug,
+				"deferring slash of {:?}% happened in {:?} (reported in {:?}) to {:?}",
+				slash_fraction,
+				slash_era,
+				active_era,
+				slash_era + slash_defer_duration + 1,
+			);
+			UnappliedSlashes::<T>::mutate(
+				slash_era.saturating_add(slash_defer_duration).saturating_add(One::one()),
+				move |for_later| for_later.push(unapplied),
+			);
+			add_db_reads_writes(1, 1);
+		}
+	} else {
+		add_db_reads_writes(4 /* fetch_spans */, 5 /* kick_out_if_recent */)
+	}
+
+	consumed_weight
 }
 
 /// Computes a slash of a validator and nominators. It returns an unapplied
@@ -235,8 +370,10 @@ pub(crate) fn compute_slash<T: Config>(
 	let mut val_slashed = Zero::zero();
 
 	// is the slash amount here a maximum for the era?
-	let own_slash = params.slash * params.exposure.own;
-	if params.slash * params.exposure.total == Zero::zero() {
+	// todo(ank4n): this is not correct. Validator slash should be slashed only once.
+	// find a good way to handle this.
+	let own_slash = params.slash * params.exposure.exposure_metadata.own;
+	if params.slash * params.exposure.exposure_page.page_total == Zero::zero() {
 		// kick out the validator even if they won't be slashed,
 		// as long as the misbehavior is from their most recent slashing span.
 		kick_out_if_recent::<T>(params);
@@ -381,8 +518,8 @@ fn slash_nominators<T: Config>(
 ) -> BalanceOf<T> {
 	let mut reward_payout = Zero::zero();
 
-	nominators_slashed.reserve(params.exposure.others.len());
-	for nominator in &params.exposure.others {
+	nominators_slashed.reserve(params.exposure.exposure_page.others.len());
+	for nominator in &params.exposure.exposure_page.others {
 		let stash = &nominator.who;
 		let mut nom_slashed = Zero::zero();
 
