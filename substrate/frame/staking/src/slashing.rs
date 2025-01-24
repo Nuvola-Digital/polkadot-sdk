@@ -223,6 +223,39 @@ pub(crate) struct SlashParams<'a, T: 'a + Config> {
 	pub(crate) reward_proportion: Perbill,
 }
 
+/// Represents an offence record within the staking system, capturing details about a slashing event.
+#[derive(Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct OffenceRecord<AccountId, Balance> {
+	/// The stash account ID of the validator who committed the offence.
+	pub validator_id: AccountId,
+
+	/// The account ID of the entity that reported the offence.
+	pub reporter_id: AccountId,
+
+	/// The session index in which the offence occurred.
+	pub offence_session: u32,
+
+	/// The specific page of the validator's exposure being processed.
+	///
+	/// A validator's total exposure may span multiple pages, and only the first page
+	/// is considered for slashing the validator's own stake.
+	pub exposure_page: u32,
+
+	/// The number of nominators or other targets affected by the offence.
+	pub affected_targets_count: u32,
+
+	/// The fraction of the validator's stake to be slashed for this offence.
+	pub slash_fraction: Perbill,
+
+	/// The portion of the validator's stake that is **liable to be slashed** for this offence.
+	///
+	/// - If the validator's exposure spans multiple pages, this amount is only considered
+	///   for slashing **when processing the first page**.
+	/// - This does **not** represent the validator's total stake, but rather the stake at risk
+	///   in this particular offence record.
+	pub slashed_validator_stake: Balance,
+}
+
 pub(crate) fn process_offence<T: Config>(
 	offence_detail: OffenceDetails<T::AccountId, T::AccountId>,
 	slash_fraction: &Perbill,
@@ -362,6 +395,7 @@ pub(crate) fn process_offence<T: Config>(
 ///
 /// The pending slash record returned does not have initialized reporters. Those have
 /// to be set at a higher level, if any.
+// TODO(ank4n): Refactor to handle one slash page properly.
 pub(crate) fn compute_slash<T: Config>(
 	params: SlashParams<T>,
 ) -> Option<UnappliedSlash<T::AccountId, BalanceOf<T>>> {
