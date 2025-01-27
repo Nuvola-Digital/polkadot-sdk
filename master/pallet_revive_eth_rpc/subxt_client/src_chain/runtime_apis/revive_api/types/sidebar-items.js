@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["balance","block_gas_limit","call","eth_transact","get_storage","instantiate","nonce","upload_code"],"struct":["Balance","BlockGasLimit","Call","EthTransact","GetStorage","Instantiate","Nonce","UploadCode"]};
