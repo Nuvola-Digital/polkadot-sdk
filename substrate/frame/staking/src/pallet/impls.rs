@@ -1501,14 +1501,14 @@ where
 {
 	fn on_offence(
 		offenders: &[OffenceDetails<T::AccountId, T::AccountId>],
-		slash_fraction: &[Perbill],
+		slash_fractions: &[Perbill],
 		slash_session: SessionIndex,
 	) -> Weight {
 		// When an offence is reported, it is split into pages and put in the offence queue.
 		// As offence queue is processed, computed slashes are queued to be applied after the
 		// SlashDeferDuration.
 
-		// todo(ank4n): Benchmark this.
+		// todo(ank4n): Benchmark this properly.
 		let mut consumed_weight = Weight::from_parts(0, 0);
 
 		// for each offender, get multiple pages of exposure.
@@ -1523,6 +1523,16 @@ where
 
 		// Simple: One offence processed per block.
 		// Complex: Based on exposure page size, multiple offences processed per block.
+
+		// Find era
+		let offence_era = 1;
+
+		for (details, slash_fraction) in offenders.iter().zip(slash_fractions) {
+			let validator = &details.offender;
+			let exposure_meta = <ErasStakersOverview<T>>::get(&offence_era, validator);
+
+			// we will slash the validator when processing the last page.
+		}
 		consumed_weight
 	}
 }

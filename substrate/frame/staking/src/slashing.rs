@@ -61,7 +61,7 @@ use frame_support::{
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{Saturating, Zero},
-	DispatchResult, RuntimeDebug,
+	PerBill, DispatchResult, RuntimeDebug,
 };
 use sp_staking::{
 	offence::{OffenceDetails, OffenceSeverity},
@@ -224,10 +224,10 @@ pub(crate) struct SlashParams<'a, T: 'a + Config> {
 }
 
 /// Represents an offence record within the staking system, capturing details about a slashing event.
-#[derive(Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct OffenceRecord<AccountId, Balance> {
-	/// The stash account ID of the validator who committed the offence.
-	pub validator_id: AccountId,
+	// /// The stash account ID of the validator who committed the offence.
+	// pub validator_id: AccountId,
 
 	/// The account ID of the entity that reported the offence.
 	pub reporter_id: AccountId,
@@ -235,25 +235,26 @@ pub struct OffenceRecord<AccountId, Balance> {
 	/// The session index in which the offence occurred.
 	pub offence_session: u32,
 
-	/// The specific page of the validator's exposure being processed.
+	/// The specific page of the validator's exposure currently being processed.
 	///
-	/// A validator's total exposure may span multiple pages, and only the first page
-	/// is considered for slashing the validator's own stake.
+	/// Since a validator's total exposure can span multiple pages, this field serves as a pointer
+	/// to the current page being evaluated. The processing order starts from the last page
+	/// and moves backward, decrementing this value with each processed page.
+	///
+	/// This ensures that all pages are systematically handled, and it helps track when
+	/// the entire exposure has been processed.
 	pub exposure_page: u32,
-
-	/// The number of nominators or other targets affected by the offence.
-	pub affected_targets_count: u32,
 
 	/// The fraction of the validator's stake to be slashed for this offence.
 	pub slash_fraction: Perbill,
 
-	/// The portion of the validator's stake that is **liable to be slashed** for this offence.
-	///
-	/// - If the validator's exposure spans multiple pages, this amount is only considered
-	///   for slashing **when processing the first page**.
-	/// - This does **not** represent the validator's total stake, but rather the stake at risk
-	///   in this particular offence record.
-	pub slashed_validator_stake: Balance,
+	// /// The portion of the validator's stake that is **liable to be slashed** for this offence.
+	// ///
+	// /// - If the validator's exposure spans multiple pages, this amount is only considered
+	// ///   for slashing **when processing the first page**.
+	// /// - This does **not** represent the validator's total stake, but rather the stake at risk
+	// ///   in this particular offence record.
+	// pub slashed_validator_stake: Balance,
 }
 
 pub(crate) fn process_offence<T: Config>(

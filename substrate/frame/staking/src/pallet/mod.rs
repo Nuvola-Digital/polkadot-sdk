@@ -670,6 +670,29 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type CanceledSlashPayout<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	/// Stores reported offences in a queue until they are processed in the subsequent blocks.
+	///
+	/// When an offence is reported, it is broken down into pages and added to this queue.
+	/// Each offence is processed sequentially, computing the associated slashes in the process.
+	/// The resulting slashes are then stored in `UnappliedSlashes` and applied
+	/// in a future era determined by `SlashDeferDuration`.
+	///
+	/// The key is an integer that acts as a self incrementing index as long as the queue is not
+	/// empty and resets to 0 when the queue is empty.
+	#[pallet::storage]
+	pub type OffenceQueue<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, slashing::OffenceRecord>;
+
+	/// Tracks the number of offence records (divided into pages) currently awaiting processing in
+	/// the queue.
+	///
+	/// Since a single offence record can span multiple pages, the total number of items
+	/// in the `OffenceQueue` alone does not provide an accurate count. This counter
+	/// ensures proper tracking of pending offences, preventing overflows and ensuring
+	/// bounded processing.
+	#[pallet::storage]
+	pub type OffenceQueueCounter<T: Config> = StorageValue<_, Twox64Concat, u32>;
+
 	/// All unapplied slashes that are queued for later.
 	#[pallet::storage]
 	#[pallet::unbounded]
