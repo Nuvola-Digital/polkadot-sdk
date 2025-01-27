@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737992906962,
+  "lastUpdate": 1738002873750,
   "repoUrl": "https://github.com/paritytech/polkadot-sdk",
   "entries": {
     "approval-voting-regression-bench": [
@@ -61828,6 +61828,105 @@ window.BENCHMARK_DATA = {
           {
             "name": "approval-voting/test-environment",
             "value": 0.00001828547,
+            "unit": "seconds"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "yrong1997@gmail.com",
+            "name": "Ron",
+            "username": "yrong"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b30aa3193048d6bbdf21408bd0cc4503010fe3f8",
+          "message": "xcm: fix for DenyThenTry Barrier (#7169)\n\nResolves (partially):\nhttps://github.com/paritytech/polkadot-sdk/issues/7148 (see _Problem 1 -\n`ShouldExecute` tuple implementation and `Deny` filter tuple_)\n\nThis PR changes the behavior of `DenyThenTry` from the pattern\n`DenyIfAllMatch` to `DenyIfAnyMatch` for the tuple.\n\nI would expect the latter is the right behavior so make the fix in\nplace, but we can also add a dedicated Impl with the legacy one\nuntouched.\n\n## TODO\n- [x] add unit-test for `DenyReserveTransferToRelayChain`\n- [x] add test and investigate/check `DenyThenTry` as discussed\n[here](https://github.com/paritytech/polkadot-sdk/pull/6838#discussion_r1914553990)\nand update documentation if needed\n\n---------\n\nCo-authored-by: Branislav Kontur <bkontur@gmail.com>\nCo-authored-by: Francisco Aguirre <franciscoaguirreperez@gmail.com>\nCo-authored-by: command-bot <>\nCo-authored-by: Clara van Staden <claravanstaden64@gmail.com>\nCo-authored-by: Adrian Catangiu <adrian@parity.io>",
+          "timestamp": "2025-01-27T17:31:05Z",
+          "tree_id": "7fa236a2b3152a85bc32cfbff3e0d953f468640f",
+          "url": "https://github.com/paritytech/polkadot-sdk/commit/b30aa3193048d6bbdf21408bd0cc4503010fe3f8"
+        },
+        "date": 1738002857240,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Received from peers",
+            "value": 52940.59999999999,
+            "unit": "KiB"
+          },
+          {
+            "name": "Sent to peers",
+            "value": 63635.159999999996,
+            "unit": "KiB"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-gather-signatures",
+            "value": 0.0055922353,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting",
+            "value": 0.00001909327,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-distribution/test-environment",
+            "value": 0.00001931447,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting/test-environment",
+            "value": 0.00001909327,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-1",
+            "value": 2.4496844615500013,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-2",
+            "value": 2.5015471726600005,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-distribution",
+            "value": 0.00001931447,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-0",
+            "value": 2.489709307330002,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-3",
+            "value": 2.468456906400002,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-db",
+            "value": 2.165782528089993,
+            "unit": "seconds"
+          },
+          {
+            "name": "test-environment",
+            "value": 3.3995609986921758,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel/approval-voting-parallel-subsystem",
+            "value": 0.503352188660015,
+            "unit": "seconds"
+          },
+          {
+            "name": "approval-voting-parallel",
+            "value": 12.584124799990011,
             "unit": "seconds"
           }
         ]
