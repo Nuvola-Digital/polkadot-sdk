@@ -2026,7 +2026,6 @@ dependencies = [
  "pallet-bridge-messages",
  "pallet-message-queue",
  "pallet-xcm",
- "pallet-xcm-bridge-hub",
  "parachains-common",
  "parity-scale-codec",
  "rococo-system-emulated-network",
@@ -2047,11 +2046,10 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-rococo-runtime"
-version = "0.16.2"
+version = "0.16.4"
 dependencies = [
  "bp-asset-hub-rococo",
  "bp-asset-hub-westend",
- "bp-bridge-hub-polkadot",
  "bp-bridge-hub-rococo",
  "bp-bridge-hub-westend",
  "bp-header-chain",
@@ -2150,7 +2148,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-test-utils"
-version = "0.20.0"
+version = "0.20.1"
 dependencies = [
  "asset-test-utils",
  "bp-header-chain",
@@ -2160,8 +2158,6 @@ dependencies = [
  "bp-relayers",
  "bp-runtime",
  "bp-test-utils",
- "bp-xcm-bridge-hub",
- "bridge-runtime-common",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue",
  "frame-support",
@@ -2184,6 +2180,7 @@ dependencies = [
  "sp-io",
  "sp-keyring",
  "sp-runtime",
+ "sp-std",
  "sp-tracing",
  "staging-xcm",
  "staging-xcm-builder",
@@ -2222,7 +2219,6 @@ dependencies = [
  "pallet-bridge-messages",
  "pallet-message-queue",
  "pallet-xcm",
- "pallet-xcm-bridge-hub",
  "parachains-common",
  "parity-scale-codec",
  "rococo-westend-system-emulated-network",
@@ -2243,7 +2239,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-hub-westend-runtime"
-version = "0.13.2"
+version = "0.13.4"
 dependencies = [
  "bp-asset-hub-rococo",
  "bp-asset-hub-westend",
@@ -2344,7 +2340,7 @@ dependencies = [
 
 [[package]]
 name = "bridge-runtime-common"
-version = "0.18.2"
+version = "0.18.3"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -2353,7 +2349,6 @@ dependencies = [
  "bp-relayers",
  "bp-runtime",
  "bp-test-utils",
- "bp-xcm-bridge-hub",
  "frame-support",
  "frame-system",
  "log",
@@ -4166,7 +4161,7 @@ dependencies = [
 
 [[package]]
 name = "cumulus-pallet-xcmp-queue"
-version = "0.17.0"
+version = "0.17.2"
 dependencies = [
  "bounded-collections",
  "bp-xcm-bridge-hub-router",
@@ -5134,12 +5129,11 @@ dependencies = [
 
 [[package]]
 name = "emulated-integration-tests-common"
-version = "16.0.0"
+version = "16.0.1"
 dependencies = [
  "asset-test-utils",
  "bp-messages",
  "bp-xcm-bridge-hub",
- "bridge-runtime-common",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
@@ -6005,7 +5999,7 @@ dependencies = [
 
 [[package]]
 name = "frame-support-procedural"
-version = "30.0.3"
+version = "30.0.6"
 dependencies = [
  "Inflector",
  "cfg-expr",
@@ -9957,7 +9951,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-balances"
-version = "39.0.0"
+version = "39.0.1"
 dependencies = [
  "docify",
  "frame-benchmarking",
@@ -10418,7 +10412,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-delegated-staking"
-version = "5.0.0"
+version = "5.0.1"
 dependencies = [
  "frame-election-provider-support",
  "frame-support",
@@ -11044,7 +11038,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-nomination-pools"
-version = "35.0.2"
+version = "35.0.3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -11646,7 +11640,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-staking"
-version = "38.0.0"
+version = "38.0.1"
 dependencies = [
  "frame-benchmarking",
  "frame-election-provider-support",
@@ -11978,7 +11972,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-xcm"
-version = "17.0.1"
+version = "17.0.2"
 dependencies = [
  "bounded-collections",
  "frame-benchmarking",
@@ -12009,13 +12003,9 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "log",
  "pallet-assets",
  "pallet-balances",
- "pallet-xcm",
  "parity-scale-codec",
- "polkadot-primitives",
- "polkadot-runtime-common",
  "scale-info",
  "sp-io",
  "sp-runtime",
@@ -12027,7 +12017,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-xcm-bridge-hub"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "bp-header-chain",
  "bp-messages",
@@ -14722,7 +14712,7 @@ dependencies = [
 
 [[package]]
 name = "polkadot-service"
-version = "19.0.1"
+version = "19.0.2"
 dependencies = [
  "assert_matches",
  "async-trait",
@@ -17879,7 +17869,7 @@ dependencies = [
 
 [[package]]
 name = "sc-network"
-version = "0.45.5"
+version = "0.45.6"
 dependencies = [
  "array-bytes",
  "assert_matches",
@@ -19509,7 +19499,7 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-beacon-primitives"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "byte-slice-cast",
  "frame-support",
@@ -19619,7 +19609,7 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-pallet-ethereum-client"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -19657,7 +19647,7 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-pallet-inbound-queue"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -20993,7 +20983,7 @@ version = "2.0.0"
 
 [[package]]
 name = "staging-xcm"
-version = "14.2.0"
+version = "14.2.1"
 dependencies = [
  "array-bytes",
  "bounded-collections",
@@ -21015,7 +21005,7 @@ dependencies = [
 
 [[package]]
 name = "staging-xcm-builder"
-version = "17.0.3"
+version = "17.0.4"
 dependencies = [
  "assert_matches",
  "frame-support",
@@ -24123,7 +24113,7 @@ dependencies = [
 
 [[package]]
 name = "xcm-runtime-apis"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "frame-executive",
  "frame-support",

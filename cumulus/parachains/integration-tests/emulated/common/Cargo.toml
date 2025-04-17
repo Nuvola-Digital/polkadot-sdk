@@ -1,6 +1,6 @@
 [package]
 name = "emulated-integration-tests-common"
-version = "16.0.0"
+version = "16.0.1"
 authors.workspace = true
 edition.workspace = true
 license = "Apache-2.0"
@@ -62,5 +62,3 @@ pallet-bridge-messages.workspace = true
 pallet-bridge-messages.default-features = true
 pallet-xcm-bridge-hub.workspace = true
 pallet-xcm-bridge-hub.default-features = true
-bridge-runtime-common.workspace = true
-bridge-runtime-common.default-features = true
